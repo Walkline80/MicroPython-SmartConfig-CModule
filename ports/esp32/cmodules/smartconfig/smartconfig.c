@@ -54,9 +54,16 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
 
 static void initialise_wifi(void)
 {
+	esp_err_t err = ESP_OK;
 	s_wifi_event_group = xEventGroupCreate();
 
-	ESP_ERROR_CHECK(esp_event_loop_create_default());
+	// ESP_ERROR_CHECK(esp_event_loop_create_default());
+	err = esp_event_loop_create_default();
+
+	if (err == ESP_ERR_INVALID_STATE) {
+		ESP_LOGI(TAG, "Event loop already created");
+	}
+
 	ESP_ERROR_CHECK(esp_event_handler_register(SC_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
 
 	xTaskCreate(smartconfig_task, "smartconfig_task", 4096, NULL, 3, NULL);
@@ -65,20 +72,29 @@ static void initialise_wifi(void)
 static void smartconfig_task(void * parm)
 {
 	EventBits_t uxBits;
-	ESP_ERROR_CHECK(esp_smartconfig_set_type(SC_TYPE_ESPTOUCH_AIRKISS));
+	esp_err_t err = ESP_OK;
+
+	// ESP_ERROR_CHECK(esp_smartconfig_set_type(SC_TYPE_ESPTOUCH_AIRKISS));
+	err = esp_smartconfig_set_type(SC_TYPE_ESPTOUCH_AIRKISS);
+
+	if (err == ESP_ERR_WIFI_NOT_INIT) {
+		ESP_LOGI(TAG, "Wifi not initialized");
+		vTaskDelete(NULL);
+		return;
+	}
+
 	smartconfig_start_config_t cfg = SMARTCONFIG_START_CONFIG_DEFAULT();
 	ESP_ERROR_CHECK(esp_smartconfig_start(&cfg));
 
 	while (1) {
 		uxBits = xEventGroupWaitBits(s_wifi_event_group, ESPTOUCH_DONE_BIT, true, false, portMAX_DELAY); 
 		if(uxBits & ESPTOUCH_DONE_BIT) {
-			ESP_LOGI(TAG, "smartconfig done");
+			ESP_LOGI(TAG, "smartconfig over");
 			ESP_ERROR_CHECK(esp_smartconfig_stop());
 			vTaskDelete(NULL);
 		}
 	}
 }
-
 
 STATIC mp_obj_t smartconfig_start(void)
 {
@@ -123,5 +139,6 @@ const mp_obj_module_t smartconfig_user_cmodule = {
 	.globals = (mp_obj_dict_t *) &smartconfig_module_globals,
 };
 
-
+#if MODULE_SMARTCONFIG_ENABLED
 MP_REGISTER_MODULE(MP_QSTR_smartconfig, smartconfig_user_cmodule);
+#endif
