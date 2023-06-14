@@ -139,6 +139,4 @@ const mp_obj_module_t smartconfig_user_cmodule = {
 	.globals = (mp_obj_dict_t *) &smartconfig_module_globals,
 };
 
-#if MODULE_SMARTCONFIG_ENABLED
 MP_REGISTER_MODULE(MP_QSTR_smartconfig, smartconfig_user_cmodule);
-#endif
