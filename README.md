@@ -8,7 +8,7 @@
 
 ### 添加模块
 
-* 将`ports/esp32/`下的文件夹复制到`MicroPython`项目对应位置
+* 将`ports/`文件夹复制到`MicroPython`项目对应位置
 * 使用如下命令编译固件：
 
 	```bash
