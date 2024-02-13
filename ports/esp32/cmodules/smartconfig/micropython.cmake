@@ -3,7 +3,7 @@ add_library(usermod_smartconfig INTERFACE)
 
 # Add our source files to the lib
 target_sources(usermod_smartconfig INTERFACE
-    ${CMAKE_CURRENT_LIST_DIR}/smartconfig.c
+    ${CMAKE_CURRENT_LIST_DIR}/modsmartconfig.c
 )
 
 # Link our INTERFACE library to the usermod target.
