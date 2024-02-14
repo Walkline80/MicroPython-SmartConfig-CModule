@@ -3,10 +3,7 @@
  * Gitee: https://gitee.com/walkline/micropython-smartconfig-cmodule
  ********************************************************************/
 #include <string.h>
-#include <stdlib.h>
 
-#include "py/obj.h"
-#include "py/mphal.h"
 #include "py/runtime.h"
 
 #include "freertos/FreeRTOS.h"
@@ -25,31 +22,31 @@ static EventGroupHandle_t wifi_event_group;
 
 static bool smartconfig_process_done = false;
 
-/* info variables */
-static uint8_t ssid[33]     = {0};
-static uint8_t bssid[6]     = {0};
+// smartconfig info variables
+static uint8_t ssid[33] = {0};
+static uint8_t bssid[6] = {0};
 static uint8_t password[65] = {0};
 static uint8_t rvd_data[33] = {0};
-static int type = SC_TYPE_ESPTOUCH_AIRKISS;
+static int8_t type = SC_TYPE_ESPTOUCH_AIRKISS;
 
-/* event_handler used for esp_event_handler_register() */
-static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
-{
+// event_handler used for esp_event_handler_register()
+static void event_handler(void *arg, esp_event_base_t event_base,
+    int32_t event_id, void *event_data) {
     if (event_base == WIFI_EVENT &&
-        event_id   == WIFI_EVENT_STA_START) {
+        event_id == WIFI_EVENT_STA_START) {
         xTaskCreate(smartconfig_task, "smartconfig_task", 4096, NULL, 3, NULL);
     } else if (event_base == WIFI_EVENT &&
-               event_id   == WIFI_EVENT_STA_DISCONNECTED) {
+               event_id == WIFI_EVENT_STA_DISCONNECTED) {
         // wrong password or other situations may occurs this event
         xEventGroupSetBits(wifi_event_group, SMARTCONFIG_DONE_BIT);
     } else if (event_base == IP_EVENT &&
-               event_id   == IP_EVENT_STA_GOT_IP) {
+               event_id == IP_EVENT_STA_GOT_IP) {
         xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
     } else if (event_base == SC_EVENT &&
-               event_id   == SC_EVENT_SCAN_DONE) {
+               event_id == SC_EVENT_SCAN_DONE) {
         ESP_LOGI(TAG, "Scan done");
     } else if (event_base == SC_EVENT &&
-               event_id   == SC_EVENT_GOT_SSID_PSWD) {
+               event_id == SC_EVENT_GOT_SSID_PSWD) {
         smartconfig_event_got_ssid_pswd_t *evt = (smartconfig_event_got_ssid_pswd_t *)event_data;
         wifi_config_t wifi_config;
 
@@ -73,16 +70,19 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
 
         check_esp_err(esp_wifi_disconnect());
         check_esp_err(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+
+        ESP_LOGI(TAG, "Try to connect to ap");
+
         esp_wifi_connect();
-    } else if (event_base == SC_EVENT && event_id == SC_EVENT_SEND_ACK_DONE) {
+    } else if (event_base == SC_EVENT &&
+               event_id == SC_EVENT_SEND_ACK_DONE) {
         xEventGroupSetBits(wifi_event_group, SMARTCONFIG_DONE_BIT);
         ESP_LOGI(TAG, "Send ack done");
     }
 }
 
-/* task function used for xTaskCreate() */
-static void smartconfig_task(void *parm)
-{
+// task function used for xTaskCreate()
+static void smartconfig_task(void *param) {
     check_esp_err(esp_smartconfig_set_type(type));
     smartconfig_start_config_t cfg = SMARTCONFIG_START_CONFIG_DEFAULT();
     check_esp_err(esp_smartconfig_start(&cfg));
@@ -90,13 +90,17 @@ static void smartconfig_task(void *parm)
     EventBits_t uxBits;
 
     while (1) {
-        uxBits = xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT | SMARTCONFIG_DONE_BIT, true, false, portMAX_DELAY);
+        uxBits = xEventGroupWaitBits(
+            wifi_event_group,
+            CONNECTED_BIT | SMARTCONFIG_DONE_BIT,
+            true, false, portMAX_DELAY
+            );
 
-        if(uxBits & CONNECTED_BIT) {
-            ESP_LOGI(TAG, "WiFi connected to ap");
+        if (uxBits & CONNECTED_BIT) {
+            ESP_LOGI(TAG, "Connected to ap");
         }
 
-        if(uxBits & SMARTCONFIG_DONE_BIT) {
+        if (uxBits & SMARTCONFIG_DONE_BIT) {
             ESP_LOGI(TAG, "Smartconfig done");
             smartconfig_process_done = true;
             smartconfig_stop();
@@ -105,12 +109,8 @@ static void smartconfig_task(void *parm)
     }
 }
 
-/*
- * initialize info variables,
- * register event handlers and restart wifi
- */
-static void smartconfig_init(void)
-{
+// initialize info variables, register event handlers and restart wifi
+static void smartconfig_init(void) {
     smartconfig_process_done = false;
 
     memset(ssid,     0, sizeof(ssid));
@@ -137,13 +137,9 @@ static void smartconfig_init(void)
     check_esp_err(esp_wifi_start());
 }
 
-/*
- * get/set smartconfig protocol type
- *
- * smartconfig.type([type])
- */
-STATIC mp_obj_t smartconfig_type(size_t n_args, const mp_obj_t *args)
-{
+// get/set smartconfig protocol type
+// smartconfig.type([type])
+STATIC mp_obj_t smartconfig_type(size_t n_args, const mp_obj_t *args) {
     if (n_args == 0 || args[0] == mp_const_none) {
         return mp_obj_new_int(type);
     } else {
@@ -162,8 +158,7 @@ STATIC mp_obj_t smartconfig_type(size_t n_args, const mp_obj_t *args)
 }
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(smartconfig_type_obj, 0, 1, smartconfig_type);
 
-STATIC mp_obj_t smartconfig_start(void)
-{
+STATIC mp_obj_t smartconfig_start(void) {
     smartconfig_stop();
     smartconfig_init();
 
@@ -171,8 +166,7 @@ STATIC mp_obj_t smartconfig_start(void)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(smartconfig_start_obj, smartconfig_start);
 
-STATIC mp_obj_t smartconfig_stop(void)
-{
+STATIC mp_obj_t smartconfig_stop(void) {
     esp_smartconfig_stop();
 
     check_esp_err(esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler));
@@ -183,20 +177,15 @@ STATIC mp_obj_t smartconfig_stop(void)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(smartconfig_stop_obj, smartconfig_stop);
 
-STATIC mp_obj_t smartconfig_done(void)
-{
+STATIC mp_obj_t smartconfig_done(void) {
     return mp_obj_new_bool(smartconfig_process_done);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(smartconfig_done_obj, smartconfig_done);
 
-/*
- * get smartconfig info
- *
- * return: tuple(ssid, password, bssid, type[, rvd_data])
- *         rvd_data - EspTouch V2 reserved data
- */
-STATIC mp_obj_t smartconfig_info(void)
-{
+// get smartconfig info
+// return: tuple(ssid, password, bssid, type[, rvd_data])
+//         rvd_data - EspTouch V2 reserved data
+STATIC mp_obj_t smartconfig_info(void) {
     mp_obj_t info[] = {
         mp_obj_new_str((const char *)ssid, strlen((const char *)ssid)),
         mp_obj_new_str((const char *)password, strlen((const char *)password)),
@@ -213,30 +202,26 @@ STATIC mp_obj_t smartconfig_info(void)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(smartconfig_info_obj, smartconfig_info);
 
-/* get ssid */
-STATIC mp_obj_t smartconfig_ssid(void)
-{
+// get ssid string
+STATIC mp_obj_t smartconfig_ssid(void) {
     return mp_obj_new_str((const char *)ssid, strlen((const char *)ssid));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(smartconfig_ssid_obj, smartconfig_ssid);
 
-/* get password */
-STATIC mp_obj_t smartconfig_password(void)
-{
+// get password string
+STATIC mp_obj_t smartconfig_password(void) {
     return mp_obj_new_str((const char *)password, strlen((const char *)password));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(smartconfig_password_obj, smartconfig_password);
 
-/* get bssid */
-STATIC mp_obj_t smartconfig_bssid(void)
-{
+// get bssid bytes
+STATIC mp_obj_t smartconfig_bssid(void) {
     return mp_obj_new_bytes(bssid, sizeof(bssid));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(smartconfig_bssid_obj, smartconfig_bssid);
 
-/* get rvd_data */
-STATIC mp_obj_t smartconfig_rvd_data(void)
-{
+// get rvd_data bytes
+STATIC mp_obj_t smartconfig_rvd_data(void) {
     return mp_obj_new_bytes(rvd_data, strlen((const char *)rvd_data));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(smartconfig_rvd_data_obj, smartconfig_rvd_data);
@@ -261,7 +246,7 @@ STATIC MP_DEFINE_CONST_DICT(smartconfig_module_globals, smartconfig_module_globa
 
 const mp_obj_module_t smartconfig_user_cmodule = {
     .base = {&mp_type_module},
-    .globals = (mp_obj_dict_t *) &smartconfig_module_globals,
+    .globals = (mp_obj_dict_t *)&smartconfig_module_globals,
 };
 
 MP_REGISTER_MODULE(MP_QSTR_smartconfig, smartconfig_user_cmodule);
