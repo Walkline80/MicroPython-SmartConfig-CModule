@@ -12,14 +12,14 @@
 
 	```python
 	# rvd_data - EspTouch V2 custom data
-	tuple('ssid', 'password', b'bssid', type[, 'rvd_data'])
+	tuple('ssid', 'password', b'bssid', type[, b'rvd_data'])
 	```
 
 * `ssid()`：获取`ssid`
 * `password()`：获取`password`
 * `bssid()`：获取`bssid`
 * `type()`：设置/获取配网协议类型
-* `rvd_data`：获取`EspTouch V2`自定义数据
+* `rvd_data()`：获取`EspTouch V2`自定义数据
 
 ### 模块常量列表
 
