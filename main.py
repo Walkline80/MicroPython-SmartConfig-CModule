@@ -18,13 +18,29 @@ TYPES = {
 }
 
 TIMEOUT = 120_000 # ms
+TESTING_ESPTOUCH_V2 = False
 
 def run_test():
 	sta = network.WLAN(network.STA_IF)
 	_ = sta.active(True)
 
-	smartconfig.type(smartconfig.TYPE_ESPTOUCH_AIRKISS)
-	print(f'smartconfig type: {TYPES[smartconfig.type()]}')
+	print('smartconfig')
+	print(f'  - version: {smartconfig.version()}')
+
+	if TESTING_ESPTOUCH_V2:
+		smartconfig.v2_key('1234567890123456')
+		print(f'  - v2 key: {smartconfig.v2_key()}')
+
+		smartconfig.type(smartconfig.TYPE_ESPTOUCH_V2)
+	else:
+		smartconfig.type(smartconfig.TYPE_ESPTOUCH_AIRKISS)
+	print(f'  - type: {TYPES[smartconfig.type()]}')
+
+	smartconfig.fast_mode(True)
+	print(f'  - fast mode: {smartconfig.fast_mode()}')
+
+	smartconfig.timeout(15)
+	print(f'  - timeout: {smartconfig.timeout()}')
 
 	smartconfig.start()
 
@@ -46,10 +62,10 @@ def run_test():
 		print(f'  - ssid: "{smartconfig.ssid()}"')
 		print(f'  - password: "{smartconfig.password()}"')
 		print(f'  - bssid: {smartconfig.bssid()}')
-		print(f'  - type: {smartconfig.type()}({TYPES[smartconfig.type()]})')
+		print(f'  - type: {smartconfig.type()} ({TYPES[smartconfig.type()]})')
 
-		if smartconfig.rvd_data():
-			print(f'  - rvd_data: {smartconfig.rvd_data()}') # EspTouch V2 custom data
+		if smartconfig.v2_data():
+			print(f'  - v2_data: "{smartconfig.v2_data()}"') # EspTouch V2 custom data
 	else:
 		# maybe wrong password or other situations
 		print('but failed connect to ap')
