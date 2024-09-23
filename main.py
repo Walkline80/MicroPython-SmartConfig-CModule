@@ -65,7 +65,9 @@ def run_test():
 		print(f'  - type: {smartconfig.type()} ({TYPES[smartconfig.type()]})')
 
 		if smartconfig.v2_data():
-			print(f'  - v2_data: "{smartconfig.v2_data()}"') # EspTouch V2 custom data
+			# EspTouch V2 custom data
+			print(f'  - v2_data: "{smartconfig.v2_data()}"')
+			print(f'  - v2_data length: {len(smartconfig.v2_data())}')
 	else:
 		# maybe wrong password or other situations
 		print('but failed connect to ap')
