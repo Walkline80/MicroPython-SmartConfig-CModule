@@ -23,6 +23,7 @@
 static EventGroupHandle_t wifi_event_group;
 
 static bool smartconfig_process_done = false;
+static bool smartconfig_handlers_registered = false;
 
 // smartconfig info variables
 static uint8_t ssid[33] = {0};
@@ -146,6 +147,7 @@ static void smartconfig_init(void) {
     check_esp_err(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID,    &event_handler, NULL));
     check_esp_err(esp_event_handler_register(IP_EVENT,   IP_EVENT_STA_GOT_IP, &event_handler, NULL));
     check_esp_err(esp_event_handler_register(SC_EVENT,   ESP_EVENT_ANY_ID,    &event_handler, NULL));
+    smartconfig_handlers_registered = true;
 
     check_esp_err(esp_wifi_set_mode(WIFI_MODE_STA));
     check_esp_err(esp_wifi_start());
@@ -242,9 +244,12 @@ static MP_DEFINE_CONST_FUN_OBJ_0(smartconfig_start_obj, smartconfig_start);
 static mp_obj_t smartconfig_stop(void) {
     esp_smartconfig_stop();
 
-    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler));
-    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler));
-    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_event_handler_unregister(SC_EVENT, ESP_EVENT_ANY_ID, &event_handler));
+    if (smartconfig_handlers_registered) {
+        check_esp_err(esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler));
+        check_esp_err(esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler));
+        check_esp_err(esp_event_handler_unregister(SC_EVENT, ESP_EVENT_ANY_ID, &event_handler));
+        smartconfig_handlers_registered = false;
+    }
 
     return mp_const_none;
 }
